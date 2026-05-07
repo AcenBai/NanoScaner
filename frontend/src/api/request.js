@@ -1,8 +1,10 @@
 import axios from "axios";
 
 const request = axios.create({
-  baseURL: "http://localhost:8000",
-  timeout: 8000
+  // Use same-origin requests in dev and rely on Vite proxy.
+  // This avoids CORS/mixed-content issues in remote forwarding scenarios.
+  baseURL: "/",
+  timeout: 120000
 });
 
 export default request;

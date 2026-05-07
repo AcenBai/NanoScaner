@@ -7,12 +7,17 @@ frontend/node_modules/
 frontend/dist/
 
 # Runtime storage data (keep out of git)
+backend/app/storage/*.json
+backend/app/storage/fontlist-v*.json
 backend/app/storage/raw/
 backend/app/storage/processed/
 backend/app/storage/features/
 backend/app/storage/models/
 backend/app/storage/reports/
 backend/app/storage/metadata/signal_files.csv
+
+# Local notebooks / data analysis drafts
+房水分辨率基线处理.ipynb
 
 # Local env files
 .env

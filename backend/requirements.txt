@@ -1,5 +1,8 @@
 fastapi
 uvicorn[standard]
+numpy
+scipy
+PyWavelets
 scikit-learn
 catboost
 neo

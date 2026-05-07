@@ -122,6 +122,69 @@ def _append_metadata_row(row: dict[str, Any]) -> None:
         writer.writerow(row)
 
 
+def list_uploaded_signals() -> list[dict[str, str]]:
+    if not METADATA_FILE.exists():
+        return []
+
+    rows: list[dict[str, str]] = []
+    with METADATA_FILE.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(
+                {
+                    "signal_uid": row.get("signal_uid", ""),
+                    "sample_uid": row.get("sample_uid", ""),
+                    "sample_name": row.get("sample_name", ""),
+                    "sample_index": row.get("sample_index", ""),
+                    "pressure_type": row.get("pressure_type", ""),
+                    "upload_time": row.get("upload_time", ""),
+                }
+            )
+    return rows
+
+
+def read_signal_metadata(signal_uid: str) -> dict[str, str]:
+    if not METADATA_FILE.exists():
+        raise ValueError("No uploaded signal metadata found.")
+
+    with METADATA_FILE.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("signal_uid") == signal_uid:
+                return {k: (v or "") for k, v in row.items()}
+
+    raise ValueError(f"signal_uid {signal_uid} does not exist.")
+
+
+def load_raw_signal_values(signal_uid: str) -> tuple[list[float], dict[str, str]]:
+    metadata = read_signal_metadata(signal_uid)
+    saved_filename = metadata.get("saved_filename", "")
+    if not saved_filename:
+        raise ValueError(f"saved file is missing for signal_uid {signal_uid}.")
+
+    raw_path = RAW_DIR / saved_filename
+    if not raw_path.exists():
+        raise ValueError(f"raw signal file not found: {raw_path}")
+
+    file_ext = raw_path.suffix.lower()
+    file_bytes = raw_path.read_bytes()
+    if file_ext == ".abf":
+        values = _parse_abf(file_bytes)
+    else:
+        try:
+            file_text = file_bytes.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            try:
+                file_text = file_bytes.decode("gb18030")
+            except UnicodeDecodeError as exc:
+                raise ValueError("Unable to decode file content with utf-8 or gb18030.") from exc
+        values = _parse_first_column(file_text, file_ext)
+
+    if not values:
+        raise ValueError(f"No valid numeric points found in signal_uid {signal_uid}.")
+    return values, metadata
+
+
 async def save_uploaded_signal(
     sample_name: str,
     sample_index: str,

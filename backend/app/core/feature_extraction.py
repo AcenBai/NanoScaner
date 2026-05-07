@@ -334,6 +334,27 @@ def extract_features_from_processed_signal(signal_uid: str, label: str) -> dict[
     }
 
 
+def build_inference_feature_row_from_signal(signal_uid: str) -> dict[str, float]:
+    normalized_uid = signal_uid.strip()
+    if not normalized_uid:
+        raise ValueError("signal_uid is required.")
+
+    _ensure_processed_signal_exists(normalized_uid)
+    metadata = read_signal_metadata(normalized_uid)
+    raw_signal = _load_raw_signal_from_metadata(normalized_uid, metadata)
+    processed, corrected_sg, coeffs = _build_notebook_style_series(
+        raw_signal,
+        pressure_type=metadata.get("pressure_type", ""),
+    )
+    base_features = _extract_base_features(processed, corrected_sg, coeffs)
+    is_negative = metadata.get("pressure_type", "") == "negative"
+    suffix = "_minus" if is_negative else ""
+    row: dict[str, float] = {}
+    for feature_name in BASE_FEATURE_COLUMNS:
+        row[f"{feature_name}{suffix}"] = float(base_features.get(feature_name, 0.0))
+    return row
+
+
 def get_extracted_features_summary() -> dict[str, Any]:
     if not EXTRACTED_FEATURES_FILE.exists():
         return {"exists": False, "rows": 0, "path": str(EXTRACTED_FEATURES_FILE)}
